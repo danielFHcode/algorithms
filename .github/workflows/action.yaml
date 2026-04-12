@@ -1,0 +1,44 @@
+name: Build Typst document
+on: [push, workflow_dispatch]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Typst
+        uses: typst-community/setup-typst@v4
+      - name: Compile Typst files
+        run: |
+          for source in *.typ
+          do
+            typst compile $source --font-path fonts
+          done
+
+      - name: Setup Agda
+        uses: wenkokke/setup-agda@v2
+      - name: Check Agda files
+        run: agda Everything.agda
+
+      - name: Upload PDF files
+        uses: actions/upload-artifact@v4
+        with:
+          name: notes
+          path: "*.pdf"
+
+      - name: Get current date
+        id: date
+        run: echo "DATE=$(date +%Y-%m-%d-%H:%M)" >> $GITHUB_ENV
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: github.ref_type == 'tag'
+        with:
+          name: "${{ github.ref_name }} — ${{ env.DATE }}"
+          body: >
+            Auto release API ${{env.RELEASE_TAG}} by @ci
+          files: "*.pdf"
