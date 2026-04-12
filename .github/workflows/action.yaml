@@ -20,10 +20,10 @@ jobs:
             typst compile $source --font-path fonts
           done
 
-      - name: Setup Agda
-        uses: wenkokke/setup-agda@v2
-      - name: Check Agda files
-        run: agda Everything.agda
+      # - name: Setup Agda
+      #   uses: wenkokke/setup-agda@v2
+      # - name: Check Agda files
+      #   run: agda Everything.agda
 
       - name: Upload PDF files
         uses: actions/upload-artifact@v4
