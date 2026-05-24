@@ -1,0 +1,114 @@
+#import "@preview/rubber-article:0.5.2": article, maketitle
+#import "@preview/datify:1.0.1": custom-date-format
+
+#show: article.with()
+#set text(lang: "he", font: "David CLM")
+// #show terms.item.where(term: [הגדרה]): set text(fill: color.rgb("#ffa0a0"))
+// #show terms.item.where(term: [אבחנה]): set text(fill: color.rgb("#d0ffd0"))
+// #show terms.item.where(term: [מסקנה]): set text(fill: color.rgb("#d0d0ff"))
+
+#show: it => if sys.inputs.at("env", default: "fmt") == "dev" {
+  set text(size: 2em)
+  set page(height: auto, numbering: none, margin: (bottom: 24cm))
+  // set text(fill: white)
+  // set line(stroke: (paint: white))
+  // set page(fill: black)
+  it
+} else { it }
+
+#import "@preview/fletcher:0.5.8": *
+
+#let mtext = text.with(font: "David CLM")
+#let pseudocode-list(..args) = {
+  import "@preview/lovelace:0.3.1": pseudocode-list
+  set text(lang: "en")
+  pseudocode-list(..args)
+}
+
+#maketitle(
+  title: "אלגוריתמים",
+  date: custom-date-format(datetime(day: 24, month: 5, year: 2026), lang: "he"),
+  authors: ("דניאל פ.ח.",),
+)
+
+= זרימה ברשתות / Network Flows
+
+רשת זרימה היא גרף מכוון כשכל קשת בגרף מייצגת מעבר ישיר בין 2 צמתים ויש לה קיבול מקסימלי capcity.
+
+#diagram($
+	& v_1 edge(12,->) edge("dd",->,10,bend:#(-20deg), label-side: #center) & v_3 edge("rd",20,->) edge("ldd",->,9,label-side: #center) & \
+	s edge("ur",16,->) edge("dr",13,->,label-side: #right) & & & t \
+	& v_2 edge(14, ->, label-side: #right) edge("uu",->,4,bend:#(-20deg),label-side: #center) & v_4 edge("uu",7,->,label-side: #center) edge("ur",4,->) \
+$)
+
+
+- מעניינים אותנו רק צמתים שיש מסלול מ-$s$ אליהם ויש מהם מסלול ל-$t$. בפרט, צריך שיהיה מסלול מ-$s$ ל-$t$. בהנתן שהצטמצמנו לצמתים הרלוונטים, הגרף קשיר במובן הלא מכוון שלו. בפרט $abs(V)-1 <= abs(E)$.
+
+- #text(red)[לא הספקתי להעתיק]
+
+רשת זרימה זה גרף $G = (V,E)$ ופונקציית קיבול $c : E -> RR^+$ (אין קשתות עם קיבול שלילי או אפס).
+
+מניחים שכל צומת נגיש מ-$s$ וממנו יש מסלול ל-$t$.
+
+/ הגדרה של זרימה: פונקציה $f : V times V -> RR$ שמתארת כמה זרימה ישירה יש בין כל זוג קודקודים. $f(u,v) = 0$ כאשר אין קשת בין $u$ ל-$v$ באף כיוון.
+
+  / תכונות: / אילוץ הקיבוץ: $f(u,v) <= c(u,v)$, אם $(u,v)$ לא קשת נניח $c(u,v) = 0$.
+          / אנטי סימטריה: $f(u,v) = -f(v,u)$
+		  / חוק שימור הזרימה: לכל $u != s,t$:
+		  	  $ sum_(v in V) f(u,v) = 0 $
+			  סכום החומר שנכנס = סכום החומר שיוצא
+		 מהתכונות נובע כי $f(u,u) = 0$ ושאם $u$ ו-$v$ אינם שכנים אז $f(u,v) = 0$.
+
+/ ערך הזרימה: $abs(f) = sum_(v in V) f(s,v) = sum_(v in V) f(v,t)$
+
+/ הרחבה להגדרה: עבור 2 קבוצות קדקודים $X$,$Y$:
+  		$
+		  f(X,Y) = sum_(u in X \ v in Y) f(u,v) \
+		  c(X,Y) = sum_(u in X \ v in Y) c(u,v) >= 0
+		$
+
+/ רעיון למציאת הזרימה הגבוהה ביותר מ-$s$ ל-$t$: נחפש מסלול מ-$s$ ל-$t$, נזרים לאורכו לפי הקיבוץ המינימלי של קשת עלים. נוכל לעדכן את הזרימה $f$ בצורה תקינה: לכל זוג קודקודים $u,v$ שאינם שכנים של המסלול $f(u,v)$ נשאר ללא שינוי. עבור $u,v$ כך ש-$(u,v)$ קשת במסלול, נחסר מ-$f(u,v)$ את הערך שהזרמנו.
+  בצעד הבא נעבור על הרשת השיורית (risidual network) המורכבת מהקשתות המקוריות של הגרף והאנטי-קשתות, כאשר:
+  #align(center)[
+	$ c_(f)(u,v) = c(u,b)-f(u,v) $ #v(-1em)
+	קיבול שיורי של קשת $(u,v)$ תחת זרימה $f$
+  ]
+  קשת רוויה אם הקיבול השיורי של הוא $0$ (ואז היא לא ברשת השמות). נעצור כאשר אין מסלול מ-$s$ ל-$t$ ברשת השוויונות.
+
+$
+  f'(u,v) = cases(
+    c_min &#h(1em) mtext("אם הזרמנו"),
+    f(u,v)+c_min &#h(1em) (u,v) in P,
+    f(u,v)-c_min &#h(1em) (u,v) in.not P,
+    f(u,v) &#h(1em) mtext("אחרת"),
+  )
+$
+
+נניח מסלול פשוט
+
+/ טענה: $f'$ גם היא תקינה אם $f$ תקינה.
+/ טענה: ערך הזרימה משתפר ממש בכל איטרציה כלומר $abs(f')>abs(f)$
+/ שאלות: - האם זה תמיד עוזר? לא. רק כאשר יש קיבולים אי-רציונליים. עם קיבולים שלמים (רציונלים) בהכרח נעצור.
+  		- כשזה עוצר, תוך כמה זמן?
+		- כשזה עוצר, האם זה אופטימלי? כן.
+
+עבור זרמים עם קיבולים שלמים, כמות האיטרציות חסומה ע"י $abs(f^*)$ כאשר $f*$ זרימה מקסימלית ($abs(f^*) <= c({s},v), c(v,{t})$).
+
+נגדיר חתך $S,T$ כך ש-$S union T = V, S inter T = emptyset, s in S, t in T$. _קיבול החתך:_ $c(S,T) = sum_(v in S \ u in T) c(v,u)$, _זרימה בחיתוך:_ $f(S,T) = sum_(v in S\ u in T) f(v,u)$.
+
+/ טענה: לכל חתך $S,T$ מתקיים $f(S,T) = abs(f)$.
+  		$
+		  f(S,T) = f(S,V) = f({s},v) + f(S\\{s},v) = abs(f) + 0
+		$
+
+/ טענה: לכל חתך $(S,T)$, $f(S,T) <= C(S,T)$. בפרט, $abs(f^*) <= C(S,T)$ לכל חתך $(S,T)$ $arrow.l.double$ $abs(F^*) <=_min_(S,T) C(S,T)$.
+
+/ משפט Max Flow Min Cut: הטענות הבאות שקולות:
+
+  + $f$ זרימה מקסימלית
+  + רשת השרירויות $G_f$ לא מכילה מסלול משפר מ-$s$ ל-$t$.
+  + $abs(f) = c(S,T)$ עבור חתך כלשהו.
+
+  _מסקנה:_ כש-FF עוצר הוא מצא זרימה מקסימלית.
+
+/ טענה: לכל צומת $v$, הערך $delta_(f)(s,v)$ עולה חלש במהלך הריצה.
